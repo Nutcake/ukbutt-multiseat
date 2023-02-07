@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using BepInEx;
 using ButtplugManaged;
@@ -14,6 +15,7 @@ namespace UKButt
         public bool emergencyStop = false;
 
         private ButtplugClient buttplugClient;
+        private List<ButtplugClient> additionalClients = new List<ButtplugClient>();
         private readonly List<ButtplugClientDevice> connectedDevices = new List<ButtplugClientDevice>();
 
         public float currentSpeed = 0;
@@ -81,6 +83,13 @@ namespace UKButt
                 Logger.LogInfo("Disconnecting from Buttplug server");
                 await buttplugClient.DisconnectAsync();
                 buttplugClient = null;
+
+                foreach (var client in additionalClients)
+                {
+                    await client.DisconnectAsync();
+                }
+
+                additionalClients.Clear();
             }
 
             buttplugClient = new ButtplugClient("ULTRAKILL");
@@ -90,6 +99,28 @@ namespace UKButt
             
             Logger.LogInfo("Connecting to Buttplug server");
             await buttplugClient.ConnectAsync(new ButtplugWebsocketConnectorOptions(new Uri($"{PrefsManager.Instance.GetStringLocal(UKButtProperties.SocketUri, "ws://localhost:12345")}/buttplug")));
+
+            var additionalOpts = PrefsManager.Instance.GetStringLocal(
+                    UKButtProperties.AdditionalUris, "").Split(',').Where(s => s.Trim() != "")
+                .Select(s => new ButtplugWebsocketConnectorOptions(new Uri(s+"/buttplug")));
+
+            foreach (var opt in additionalOpts)
+            {
+                var client = new ButtplugClient("ULTRAKILL Multiseat");
+                client.DeviceAdded += AddDevice;
+                client.DeviceRemoved += RemoveDevice;
+                buttplugClient.ScanningFinished += ScanningFinished;
+                Debug.Log("Connecting to additional Buttplug server");
+                await client.ConnectAsync(opt);
+                try
+                {
+                    await buttplugClient.StartScanningAsync();
+                }
+                catch (ButtplugException ex)
+                {
+                    Debug.LogError($"Scanning failed: {ex.InnerException?.Message ?? "Unknown Error"}");
+                }
+            }
 
             var startScanningTask = buttplugClient.StartScanningAsync();
             try

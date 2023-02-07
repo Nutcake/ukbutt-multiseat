@@ -5,6 +5,8 @@
         // Keys used for storing preferences
         public static readonly string SocketUri = "ukbutt.socketUri";
 
+        public static readonly string AdditionalUris = "ukbutt.additionalUris";
+
         // Adjustments
         public static readonly string Strength = "ukbutt.strength";
 

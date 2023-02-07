@@ -22,6 +22,13 @@ namespace UKButt.Commands
                 },
                 new PrefReference
                 {
+                    Key = UKButtProperties.AdditionalUris,
+                    Local = true,
+                    Type = typeof(string),
+                    Default = ""
+                },
+                new PrefReference
+                {
                     Key = UKButtProperties.Strength,
                     Local = true,
                     Type = typeof(float),
